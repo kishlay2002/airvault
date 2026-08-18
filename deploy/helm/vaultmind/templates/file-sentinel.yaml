@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultmind-file-sentinel
+  labels:
+    app: vaultmind
+    component: file-sentinel
+spec:
+  replicas: {{ .Values.fileSentinel.replicas }}
+  selector:
+    matchLabels:
+      app: vaultmind
+      component: file-sentinel
+  template:
+    metadata:
+      labels:
+        app: vaultmind
+        component: file-sentinel
+    spec:
+      containers:
+        - name: file-sentinel
+          image: {{ .Values.fileSentinel.image }}
+          {{- if .Values.airgapped.enabled }}
+          imagePullPolicy: Never
+          {{- end }}
+          env:
+            - name: WATCH_DIR
+              value: {{ .Values.fileSentinel.watchDir }}
+            - name: REDIS_URL
+              value: "redis://vaultmind-redis:6379/0"
+          volumeMounts:
+            - name: inbox
+              mountPath: /data/inbox
+          resources:
+            {{- toYaml .Values.fileSentinel.resources | nindent 12 }}
+      volumes:
+        - name: inbox
+          persistentVolumeClaim:
+            claimName: vaultmind-inbox

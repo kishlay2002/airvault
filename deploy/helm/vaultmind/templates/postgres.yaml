@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vaultmind-postgres
+  labels:
+    app: vaultmind
+    component: postgres
+spec:
+  serviceName: vaultmind-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vaultmind
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: vaultmind
+        component: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          {{- if .Values.airgapped.enabled }}
+          imagePullPolicy: Never
+          {{- end }}
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.username }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgres.password }}
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vaultmind-postgres
+spec:
+  selector:
+    app: vaultmind
+    component: postgres
+  ports:
+    - port: 5432
+  clusterIP: None

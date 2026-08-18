@@ -1,0 +1,60 @@
+# VaultMind Helm Values
+
+queryApi:
+  replicas: 1
+  image: vaultmind/query-api:latest
+  port: 8000
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+ingestionWorker:
+  replicas: 1
+  image: vaultmind/ingestion-worker:latest
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+fileSentinel:
+  replicas: 1
+  image: vaultmind/file-sentinel:latest
+  watchDir: /data/inbox
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+postgres:
+  image: postgres:16-alpine
+  storage: 10Gi
+  database: vaultmind
+  username: vaultmind
+  password: changeme
+
+redis:
+  image: redis:7-alpine
+  storage: 1Gi
+
+qdrant:
+  image: qdrant/qdrant:v1.9.0
+  storage: 20Gi
+
+embedding:
+  model: BAAI/bge-small-en-v1.5
+  dimension: 384
+
+# Air-gapped overrides
+airgapped:
+  enabled: false
+  imagePullPolicy: Never

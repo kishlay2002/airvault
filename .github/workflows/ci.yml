@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint ingestion-worker
+        run: cd services/ingestion-worker && ruff check . && ruff format --check .
+      - name: Lint query-api
+        run: cd services/query-api && ruff check . && ruff format --check .
+      - name: Lint cli
+        run: cd cli && ruff check . && ruff format --check .
+
+  lint-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Vet
+        run: cd services/file-sentinel && go vet ./...
+
+  test-query-api:
+    runs-on: ubuntu-latest
+    needs: lint-python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: cd services/query-api && pip install ".[dev]"
+      - name: Run tests
+        run: cd services/query-api && python -m pytest tests/ -v --asyncio-mode=auto
+
+  test-ingestion:
+    runs-on: ubuntu-latest
+    needs: lint-python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: cd services/ingestion-worker && pip install ".[dev]"
+      - name: Run tests
+        run: cd services/ingestion-worker && python -m pytest tests/ -v --asyncio-mode=auto
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test-query-api, test-ingestion, lint-go]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Query API image
+        run: docker build -t vaultmind/query-api:latest services/query-api
+      - name: Build Ingestion Worker image
+        run: docker build -t vaultmind/ingestion-worker:latest services/ingestion-worker
+      - name: Build File Sentinel image
+        run: docker build -t vaultmind/file-sentinel:latest services/file-sentinel

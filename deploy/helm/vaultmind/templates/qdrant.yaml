@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vaultmind-qdrant
+  labels:
+    app: vaultmind
+    component: qdrant
+spec:
+  serviceName: vaultmind-qdrant
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vaultmind
+      component: qdrant
+  template:
+    metadata:
+      labels:
+        app: vaultmind
+        component: qdrant
+    spec:
+      containers:
+        - name: qdrant
+          image: {{ .Values.qdrant.image }}
+          {{- if .Values.airgapped.enabled }}
+          imagePullPolicy: Never
+          {{- end }}
+          ports:
+            - containerPort: 6333
+            - containerPort: 6334
+          volumeMounts:
+            - name: qdrant-data
+              mountPath: /qdrant/storage
+  volumeClaimTemplates:
+    - metadata:
+        name: qdrant-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.qdrant.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vaultmind-qdrant
+spec:
+  selector:
+    app: vaultmind
+    component: qdrant
+  ports:
+    - name: http
+      port: 6333
+    - name: grpc
+      port: 6334
+  clusterIP: None

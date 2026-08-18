@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "vaultmind": {
+      "command": "python",
+      "args": ["-m", "app.main", "--mcp"],
+      "cwd": "services/query-api",
+      "env": {
+        "POSTGRES_DSN": "postgresql+asyncpg://vaultmind:changeme@localhost:5432/vaultmind",
+        "REDIS_URL": "redis://localhost:6379/0",
+        "QDRANT_HOST": "localhost",
+        "QDRANT_PORT": "6333"
+      }
+    }
+  }
+}

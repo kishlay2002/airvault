@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultmind-query-api
+  labels:
+    app: vaultmind
+    component: query-api
+spec:
+  replicas: {{ .Values.queryApi.replicas }}
+  selector:
+    matchLabels:
+      app: vaultmind
+      component: query-api
+  template:
+    metadata:
+      labels:
+        app: vaultmind
+        component: query-api
+    spec:
+      containers:
+        - name: query-api
+          image: {{ .Values.queryApi.image }}
+          {{- if .Values.airgapped.enabled }}
+          imagePullPolicy: Never
+          {{- end }}
+          ports:
+            - containerPort: {{ .Values.queryApi.port }}
+          env:
+            - name: POSTGRES_DSN
+              value: "postgresql+asyncpg://{{ .Values.postgres.username }}:{{ .Values.postgres.password }}@vaultmind-postgres:5432/{{ .Values.postgres.database }}"
+            - name: REDIS_URL
+              value: "redis://vaultmind-redis:6379/0"
+            - name: QDRANT_HOST
+              value: "vaultmind-qdrant"
+            - name: QDRANT_PORT
+              value: "6333"
+            - name: EMBEDDING_MODEL
+              value: {{ .Values.embedding.model }}
+            - name: EMBEDDING_DIMENSION
+              value: "{{ .Values.embedding.dimension }}"
+          resources:
+            {{- toYaml .Values.queryApi.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.queryApi.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: {{ .Values.queryApi.port }}
+            initialDelaySeconds: 45
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vaultmind-query-api
+spec:
+  selector:
+    app: vaultmind
+    component: query-api
+  ports:
+    - port: 8000
+      targetPort: {{ .Values.queryApi.port }}
+  type: ClusterIP

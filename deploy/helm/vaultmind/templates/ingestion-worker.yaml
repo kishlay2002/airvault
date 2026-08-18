@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultmind-ingestion-worker
+  labels:
+    app: vaultmind
+    component: ingestion-worker
+spec:
+  replicas: {{ .Values.ingestionWorker.replicas }}
+  selector:
+    matchLabels:
+      app: vaultmind
+      component: ingestion-worker
+  template:
+    metadata:
+      labels:
+        app: vaultmind
+        component: ingestion-worker
+    spec:
+      containers:
+        - name: ingestion-worker
+          image: {{ .Values.ingestionWorker.image }}
+          {{- if .Values.airgapped.enabled }}
+          imagePullPolicy: Never
+          {{- end }}
+          env:
+            - name: POSTGRES_DSN
+              value: "postgresql+asyncpg://{{ .Values.postgres.username }}:{{ .Values.postgres.password }}@vaultmind-postgres:5432/{{ .Values.postgres.database }}"
+            - name: REDIS_URL
+              value: "redis://vaultmind-redis:6379/0"
+            - name: QDRANT_HOST
+              value: "vaultmind-qdrant"
+            - name: QDRANT_PORT
+              value: "6333"
+            - name: EMBEDDING_MODEL
+              value: {{ .Values.embedding.model }}
+          volumeMounts:
+            - name: inbox
+              mountPath: /data/inbox
+          resources:
+            {{- toYaml .Values.ingestionWorker.resources | nindent 12 }}
+      volumes:
+        - name: inbox
+          persistentVolumeClaim:
+            claimName: vaultmind-inbox

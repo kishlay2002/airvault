@@ -1,0 +1,126 @@
+version: "3.9"
+
+services:
+  # --- Data Layer ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: vaultmind-postgres
+    environment:
+      POSTGRES_DB: vaultmind
+      POSTGRES_USER: vaultmind
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vaultmind"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: vaultmind-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: vaultmind-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # --- Application Layer ---
+  file-sentinel:
+    build:
+      context: ./services/file-sentinel
+      dockerfile: Dockerfile
+    container_name: vaultmind-file-sentinel
+    environment:
+      WATCH_DIR: /data/inbox
+      REDIS_URL: redis://redis:6379/0
+      LOG_LEVEL: info
+    volumes:
+      - inbox_data:/data/inbox
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ingestion-worker:
+    build:
+      context: ./services/ingestion-worker
+      dockerfile: Dockerfile
+    container_name: vaultmind-ingestion-worker
+    environment:
+      POSTGRES_DSN: postgresql+asyncpg://vaultmind:changeme@postgres:5432/vaultmind
+      REDIS_URL: redis://redis:6379/0
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      EMBEDDING_MODEL: BAAI/bge-small-en-v1.5
+      EMBEDDING_DIMENSION: 384
+      CHUNK_SIZE: 512
+      CHUNK_OVERLAP: 64
+      LOG_LEVEL: INFO
+    volumes:
+      - inbox_data:/data/inbox
+      - models_cache:/root/.cache/huggingface
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+  query-api:
+    build:
+      context: ./services/query-api
+      dockerfile: Dockerfile
+    container_name: vaultmind-query-api
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_DSN: postgresql+asyncpg://vaultmind:changeme@postgres:5432/vaultmind
+      REDIS_URL: redis://redis:6379/0
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      EMBEDDING_MODEL: BAAI/bge-small-en-v1.5
+      EMBEDDING_DIMENSION: 384
+      DEFAULT_TOP_K: 5
+      LOG_LEVEL: INFO
+    volumes:
+      - models_cache:/root/.cache/huggingface
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  redis_data:
+  qdrant_data:
+  inbox_data:
+  models_cache:

@@ -1,0 +1,20 @@
+# Air-gapped deployment overrides
+# Use with: helm install vaultmind . -f values.yaml -f values-airgapped.yaml
+
+airgapped:
+  enabled: true
+  imagePullPolicy: Never
+
+# All images pre-loaded via airgap-deploy.sh
+queryApi:
+  image: vaultmind/query-api:latest
+ingestionWorker:
+  image: vaultmind/ingestion-worker:latest
+fileSentinel:
+  image: vaultmind/file-sentinel:latest
+postgres:
+  image: postgres:16-alpine
+redis:
+  image: redis:7-alpine
+qdrant:
+  image: qdrant/qdrant:v1.9.0

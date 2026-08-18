@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultmind-redis
+  labels:
+    app: vaultmind
+    component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vaultmind
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: vaultmind
+        component: redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          {{- if .Values.airgapped.enabled }}
+          imagePullPolicy: Never
+          {{- end }}
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vaultmind-redis
+spec:
+  selector:
+    app: vaultmind
+    component: redis
+  ports:
+    - port: 6379

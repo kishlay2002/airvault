@@ -1,0 +1,6 @@
+apiVersion: v2
+name: vaultmind
+description: Air-Gapped Document Intelligence Engine
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

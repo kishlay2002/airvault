@@ -1,0 +1,41 @@
+version: "3.9"
+
+# AirVault SDK — One-command demo setup
+# Usage: docker compose -f docker-compose.demo.yml up -d
+#        python examples/run_demo.py
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: airvault-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - airvault-qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:6333/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: airvault-postgres
+    environment:
+      POSTGRES_USER: airvault
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: airvault
+    ports:
+      - "5432:5432"
+    volumes:
+      - airvault-pg-data:/var/lib/postgresql/data
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airvault"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  airvault-qdrant-data:
+  airvault-pg-data:

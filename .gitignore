@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+venv/
+
+# Go
+/services/file-sentinel/sentinel
+
+# Docker
+*.tar
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# Data
+/data/
+*.sqlite
+
+# Models cache (large)
+models_cache/
+models/
+
+# Test
+.pytest_cache/
+htmlcov/
+.coverage

@@ -1,0 +1,36 @@
+INTERNAL ONLY — Company Policy Document
+
+Data Retention and Classification Policy
+Version 2.1 — Effective January 2025
+
+1. Purpose
+This policy establishes guidelines for retaining and classifying company documents
+to ensure regulatory compliance and operational efficiency.
+
+2. Document Retention Periods
+All classified documents must be retained for a minimum of 7 years from the date
+of creation. Internal documents must be reviewed annually for potential
+reclassification. Public-facing documents have no mandatory retention period but
+should be archived for reference.
+
+3. Classification Levels
+Documents are classified into four sensitivity tiers:
+- Public: Information approved for external distribution
+- Internal: Day-to-day business information not meant for public release
+- Confidential: Sensitive business information including financial projections,
+  merger discussions, and trade secrets
+- Restricted: Highly sensitive material requiring explicit need-to-know access
+
+4. Employee Responsibilities
+All employees must classify documents at the time of creation. Misclassification
+may result in disciplinary action. When in doubt, classify at the higher tier
+and request review from your department's data steward.
+
+5. Data Destruction
+When retention periods expire, documents must be destroyed using approved methods:
+digital files via secure deletion (DoD 5220.22-M standard), physical documents
+via cross-cut shredding. Destruction must be logged in the compliance system.
+
+6. Annual Review
+This policy undergoes annual review by the Chief Information Security Officer.
+Next review date: January 2026.
