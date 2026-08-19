@@ -1,11 +1,11 @@
 [project]
 name = "airvault"
-version = "0.1.0"
+version = "0.1.1"
 description = "AirVault — Air-Gapped Document Intelligence SDK with compliance-aware access control"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
-authors = [{name = "Kishlay Kumar"}]
+authors = [{name = "Kishlay Kashish"}]
 keywords = ["rag", "document-intelligence", "vector-search", "air-gapped", "compliance"]
 classifiers = [
     "Development Status :: 3 - Alpha",
