@@ -248,28 +248,24 @@ except AirVaultError:  # Catch-all for any SDK error
 
 ```
 airvault/
-├── sdk/                          # ← THE CORE: pip install airvault
-│   └── airvault/
-│       ├── engine.py             # AirVault class (main entry point)
-│       ├── config.py             # AirVaultConfig (pydantic-settings, env vars)
-│       ├── types.py              # SensitivityTier, QueryResult, Citation
-│       ├── errors.py             # AirVaultError hierarchy
-│       ├── sync.py               # AirVaultSync (sync wrapper)
-│       ├── py.typed              # PEP 561 typing marker
-│       ├── ingestion/            # Extract → chunk → classify → embed → store
-│       ├── embedding/            # Local sentence-transformers (batched)
-│       ├── retrieval/            # Query engine + access filter
-│       ├── storage/              # Qdrant + PostgreSQL
-│       ├── _rest_server.py       # Thin FastAPI wrapper
-│       └── _mcp_server.py        # Thin MCP wrapper
-│   └── tests/                    # 62 unit tests
-├── services/
-│   ├── ingestion-worker/         # arq worker (calls SDK)
-│   └── file-sentinel/            # Go file watcher sidecar
-├── docker-compose.demo.yml       # One-command infra setup
-├── examples/                     # Usage examples + run_demo.py
-├── migrations/                   # PostgreSQL schema
-└── docs/                         # RUNBOOK, THREAT_MODEL
+├── engine.py             # AirVault class (main entry point)
+├── config.py             # AirVaultConfig (pydantic-settings, env vars)
+├── types.py              # SensitivityTier, QueryResult, Citation, IngestResult
+├── errors.py             # AirVaultError hierarchy (typed exceptions)
+├── sync.py               # AirVaultSync (sync wrapper for non-async code)
+├── py.typed              # PEP 561 typing marker
+├── ingestion/            # Extract → chunk → classify → embed → store
+│   ├── pipeline.py       # Orchestrates the full ingestion flow
+│   ├── chunker.py        # Sliding-window text chunking
+│   ├── classifier.py     # Sensitivity auto-classification
+│   └── extractors/       # PDF, audio (Whisper), image (OCR), text
+├── embedding/            # Local sentence-transformers (batched)
+├── retrieval/            # Query engine + access filter
+│   ├── engine.py         # Semantic search with clearance enforcement
+│   └── access.py         # Qdrant-level access control filter
+├── storage/              # Qdrant (vectors) + PostgreSQL (metadata, audit)
+├── _rest_server.py       # Optional FastAPI wrapper
+└── _mcp_server.py        # Optional MCP server for AI agents
 ```
 
 ## Air-Gapped Deployment
