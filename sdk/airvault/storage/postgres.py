@@ -30,6 +30,55 @@ class PostgresStore:
         async with self._session_factory() as session:
             await session.execute(text("SELECT 1"))
 
+    async def auto_migrate(self) -> None:
+        """Create tables if they don't exist. Safe to call multiple times."""
+        ddl = """
+        CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+        CREATE TABLE IF NOT EXISTS collections (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) UNIQUE NOT NULL,
+            description TEXT,
+            created_at TIMESTAMPTZ DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS documents (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            filename VARCHAR(500) NOT NULL,
+            file_type VARCHAR(20) NOT NULL,
+            checksum VARCHAR(64) NOT NULL UNIQUE,
+            collection_id UUID REFERENCES collections(id) ON DELETE CASCADE,
+            sensitivity_tier VARCHAR(20) NOT NULL DEFAULT 'public',
+            chunk_count INTEGER NOT NULL DEFAULT 0,
+            file_size BIGINT NOT NULL,
+            ingested_at TIMESTAMPTZ DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID,
+            query_text TEXT NOT NULL,
+            collection_name VARCHAR(255),
+            user_clearance VARCHAR(20) NOT NULL,
+            chunks_retrieved INTEGER NOT NULL,
+            chunks_redacted INTEGER NOT NULL,
+            response_summary TEXT,
+            query_duration_ms FLOAT,
+            created_at TIMESTAMPTZ DEFAULT now()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_documents_collection ON documents(collection_id);
+        CREATE INDEX IF NOT EXISTS idx_documents_sensitivity ON documents(sensitivity_tier);
+        CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at DESC);
+        """
+        async with self._session_factory() as session:
+            for stmt in ddl.strip().split(";"):
+                stmt = stmt.strip()
+                if stmt:
+                    await session.execute(text(stmt))
+            await session.commit()
+        logger.info("auto_migrate_complete")
+
     async def close(self) -> None:
         """Dispose of the connection pool."""
         await self._engine.dispose()

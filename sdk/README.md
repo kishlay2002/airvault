@@ -35,22 +35,68 @@ pip install airvault[all]             # Everything
 
 ## Try It Yourself (2 minutes)
 
+### From PyPI (no repo needed)
+
 ```bash
-# 1. Clone and install
-git clone https://github.com/kishlay2002/airvault.git && cd airvault
-pip install -e "sdk/[dev]"
+# 1. Install
+pip install airvault
 
-# 2. Start infrastructure (Qdrant + PostgreSQL, schema auto-applied)
-docker compose -f docker-compose.demo.yml up -d
+# 2. Start Qdrant + PostgreSQL (Docker required)
+docker run -d --name airvault-qdrant -p 6333:6333 qdrant/qdrant:latest
+docker run -d --name airvault-postgres -p 5432:5432 \
+  -e POSTGRES_USER=airvault -e POSTGRES_PASSWORD=changeme \
+  -e POSTGRES_DB=airvault postgres:16-alpine
 
-# 3. Run unit tests (no infra needed)
-cd sdk && pytest tests/ -v   # 62 tests, ~8 seconds
-
-# 4. Run the full end-to-end demo
-python examples/run_demo.py
+# 3. Run the demo below (copy-paste into demo.py)
+python demo.py
 ```
 
-The demo ingests documents at different sensitivity levels and queries as users with different clearances — showing that a PUBLIC user **never** sees CONFIDENTIAL chunks.
+```python
+# demo.py — full end-to-end in 30 lines
+import asyncio
+from airvault import AirVault, SensitivityTier
+
+async def main():
+    async with AirVault() as engine:
+        # Ingest public and confidential documents
+        await engine.ingest_text(
+            "Quarterly revenue was $12.3M, up 15%. Customer retention at 94%.",
+            source_name="earnings.txt", collection="demo",
+            sensitivity=SensitivityTier.PUBLIC,
+        )
+        await engine.ingest_text(
+            "CONFIDENTIAL: Merger with Nexus Corp at $200M. Board vote in Q3.",
+            source_name="merger.txt", collection="demo",
+            sensitivity=SensitivityTier.CONFIDENTIAL,
+        )
+
+        # PUBLIC user: cannot see merger details
+        public = await engine.query("revenue and merger", collection="demo",
+                                     clearance=SensitivityTier.PUBLIC)
+        print(f"PUBLIC  → {public.chunks_retrieved} chunks, {public.chunks_redacted} redacted")
+
+        # CONFIDENTIAL user: sees everything
+        conf = await engine.query("revenue and merger", collection="demo",
+                                   clearance=SensitivityTier.CONFIDENTIAL)
+        print(f"CONFID  → {conf.chunks_retrieved} chunks, {conf.chunks_redacted} redacted")
+
+        for c in conf.citations:
+            print(f"  [{c.sensitivity.value}] {c.excerpt[:80]}...")
+
+asyncio.run(main())
+```
+
+### From Source (for developers)
+
+```bash
+git clone https://github.com/kishlay2002/airvault.git && cd airvault
+pip install -e "sdk/[dev]"
+docker compose -f docker-compose.demo.yml up -d
+cd sdk && pytest tests/ -v   # 62 tests, ~8 seconds
+python examples/run_demo.py  # full E2E demo
+```
+
+The DB schema is **auto-created** on first use — no manual SQL needed.
 
 ## Quick Start
 

@@ -86,10 +86,18 @@ class AirVault:
         self._pipeline: IngestionPipeline | None = None
         self._retrieval: RetrievalEngine | None = None
         self._closed = False
+        self._migrated = False
 
         logger.info("airvault_initialized", model=self.config.embedding_model)
 
+    async def _ensure_migrated(self) -> None:
+        """Auto-create DB tables on first use. Safe to call multiple times."""
+        if not self._migrated:
+            await self.postgres.auto_migrate()
+            self._migrated = True
+
     async def __aenter__(self) -> "AirVault":
+        await self._ensure_migrated()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -194,6 +202,7 @@ class AirVault:
             IngestionError: If extraction, chunking, or storage fails.
         """
         self._check_closed()
+        await self._ensure_migrated()
 
         path = Path(file_path)
         if not path.exists():
@@ -307,6 +316,7 @@ class AirVault:
             IngestionError: If chunking or storage fails.
         """
         self._check_closed()
+        await self._ensure_migrated()
 
         tier_override = None
         if sensitivity is not None:
@@ -361,6 +371,7 @@ class AirVault:
             QueryResult with answer, citations, and redaction count.
         """
         self._check_closed()
+        await self._ensure_migrated()
 
         if isinstance(clearance, str):
             clearance = SensitivityTier(clearance)
